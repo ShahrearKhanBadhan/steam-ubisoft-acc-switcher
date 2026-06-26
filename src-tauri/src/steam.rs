@@ -473,6 +473,66 @@ pub fn add_account() -> Result<(), String> {
     Ok(())
 }
 
+/// Forget a saved Steam login: remove its block from loginusers.vdf, clear the
+/// auto-login pointer if it pointed here, and drop the cached avatar. Steam's
+/// own files/credentials for the account aren't otherwise touched — it simply
+/// won't be remembered or offered for auto-login anymore.
+///
+/// Note: this edits loginusers.vdf in place without closing Steam. If Steam is
+/// running it may rewrite that file on exit and bring the entry back, so removal
+/// is most reliable with Steam closed.
+#[tauri::command]
+pub fn forget_account(steamid: String) -> Result<(), String> {
+    let steam_path = resolve_steam_path();
+    let path = login_users_path(&steam_path);
+
+    let text = std::fs::read_to_string(&path)
+        .map_err(|_| format!("loginusers.vdf not found at {}", path.display()))?;
+
+    let mut vdf = keyvalues_parser::parse(&text)
+        .map_err(|e| format!("Failed to parse loginusers.vdf: {e}"))?
+        .into_vdf()
+        .into_owned();
+
+    let users = vdf
+        .value
+        .get_mut_obj()
+        .ok_or_else(|| "loginusers.vdf has an unexpected structure".to_string())?;
+
+    // Grab the account name first so we can clear AutoLoginUser if it matches.
+    let account_name = users
+        .get(steamid.as_str())
+        .and_then(|values| values.first())
+        .and_then(|v| v.get_obj())
+        .and_then(|inner| get_field(inner, "AccountName"));
+
+    if users.remove(steamid.as_str()).is_none() {
+        return Err(format!("Account {steamid} was not found in loginusers.vdf"));
+    }
+
+    std::fs::write(&path, format!("{vdf}"))
+        .map_err(|e| format!("Failed to write loginusers.vdf: {e}"))?;
+
+    // Clear the auto-login pointer if it referenced the removed account.
+    if let Some(name) = account_name {
+        let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+        if let Ok(key) =
+            hkcu.open_subkey_with_flags(STEAM_REG_KEY, KEY_QUERY_VALUE | KEY_SET_VALUE)
+        {
+            if let Ok(current) = key.get_value::<String, _>("AutoLoginUser") {
+                if current.eq_ignore_ascii_case(&name) {
+                    let _ = key.set_value("AutoLoginUser", &"");
+                }
+            }
+        }
+    }
+
+    // Best-effort cleanup of the cached avatar so it's fully forgotten.
+    let _ = std::fs::remove_file(avatar_file_path(&steam_path, &steamid));
+
+    Ok(())
+}
+
 #[tauri::command]
 pub fn get_steam_path() -> Result<String, String> {
     let path = resolve_steam_path();

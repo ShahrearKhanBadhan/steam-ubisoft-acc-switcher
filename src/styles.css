@@ -202,6 +202,7 @@ body {
 
 /* ---------------------------------------------------------- active banner */
 .banner {
+  position: relative;
   margin: 2px 16px 14px;
   padding: 14px;
   border-radius: 14px;
@@ -612,3 +613,240 @@ body {
   box-shadow: 0 8px 24px rgba(var(--accent-rgb), 0.7);
 }
 .save-btn.saved { background: var(--online); box-shadow: 0 6px 18px rgba(164, 208, 7, 0.5); }
+
+/* =========================================================== PLATFORM TABS */
+.tabbar {
+  flex: 0 0 36px;
+  height: 36px;
+  display: flex;
+  background: rgba(0, 0, 0, 0.15);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  position: relative;
+  z-index: 9;
+}
+.tab {
+  flex: 1 1 50%;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 200ms ease, background 200ms ease, border-color 200ms ease;
+}
+.tab:hover { color: var(--text-soft); }
+.tab--active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.06);
+}
+.tab--ubisoft.tab--active {
+  color: #f4661a;
+  border-bottom-color: #f4661a;
+  background: rgba(244, 102, 26, 0.06);
+}
+
+/* ---------------------------------------------------------- platform panes */
+.platform-content {
+  position: relative;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+.platform-content > .screens,
+.platform-content > .ubisoft-pane {
+  position: absolute;
+  inset: 0;
+}
+.screens { transition: opacity 200ms var(--ease); }
+.app.show-ubisoft .screens { opacity: 0; pointer-events: none; }
+
+.ubisoft-pane {
+  /* Ubisoft-branded orange accent, scoped to this pane only. */
+  --accent-rgb: 244, 102, 26;
+  --accent: rgb(244, 102, 26);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms var(--ease);
+}
+.app.show-ubisoft .ubisoft-pane { opacity: 1; pointer-events: auto; }
+
+.logo--ubisoft {
+  background: linear-gradient(135deg, #f4661a, #7a2d05);
+  box-shadow: 0 4px 14px rgba(244, 102, 26, 0.35);
+}
+
+/* ---------------------------------------------------------- empty state */
+.empty-state {
+  margin: auto;
+  padding: 22px 18px;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+.empty-state strong { color: var(--text-soft); }
+
+/* ---------------------------------------------------------- card delete + confirm */
+.card__del {
+  position: absolute;
+  top: 6px;
+  right: 7px;
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  border: none;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 150ms ease, background 150ms ease, color 150ms ease;
+}
+.card:hover .card__del { opacity: 1; }
+.card__del:hover { background: rgba(227, 93, 106, 0.18); color: #e35d6a; }
+
+.card__confirm { display: flex; gap: 6px; flex: 0 0 auto; }
+.card__confirm button {
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 7px;
+  border: none;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 150ms ease;
+}
+.card__confirm button:hover { filter: brightness(1.12); }
+.card__confirm-cancel { background: rgba(255, 255, 255, 0.08); color: var(--text-soft); }
+.card__confirm-ok { background: rgba(227, 93, 106, 0.9); color: #fff; }
+
+/* remove control on the active-account banner */
+.banner__del {
+  position: absolute;
+  top: 9px;
+  right: 10px;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 150ms ease, background 150ms ease, color 150ms ease;
+}
+.banner:hover .banner__del { opacity: 1; }
+.banner__del:hover { background: rgba(227, 93, 106, 0.2); color: #e35d6a; }
+.banner__confirm { margin-left: auto; }
+
+/* ---------------------------------------------------------- new-account pulse */
+@keyframes newpulse {
+  0% { box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0.5); }
+  100% { box-shadow: 0 0 0 14px rgba(var(--accent-rgb), 0); }
+}
+.card--new { animation: newpulse 1.2s var(--ease); }
+.banner--new { animation: newpulse 1.2s var(--ease); }
+
+/* =========================================================== UBISOFT MODAL */
+.ubi-modal {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms var(--ease);
+}
+.ubi-modal.show { opacity: 1; pointer-events: auto; }
+.ubi-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 11, 15, 0.55);
+  backdrop-filter: blur(3px);
+}
+.ubi-modal__card {
+  position: relative;
+  width: calc(100% - 56px);
+  max-width: 300px;
+  padding: 18px;
+  border-radius: 14px;
+  background: linear-gradient(165deg, #243447 0%, #1b2530 100%);
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 0 0 1px rgba(244, 102, 26, 0.25);
+  transform: scale(0.92) translateY(6px);
+  transition: transform 220ms var(--pop);
+}
+.ubi-modal.show .ubi-modal__card { transform: scale(1) translateY(0); }
+.ubi-modal__title { font-size: 15px; font-weight: 700; color: var(--text); }
+.ubi-modal__body {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin-top: 6px;
+  line-height: 1.45;
+}
+.ubi-modal__input {
+  width: 100%;
+  height: 38px;
+  margin-top: 12px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 150ms ease;
+}
+.ubi-modal__input:focus { border-color: rgba(244, 102, 26, 0.6); }
+.ubi-modal__error {
+  color: #e35d6a;
+  font-size: 11.5px;
+  margin-top: 10px;
+  min-height: 14px;
+  line-height: 1.35;
+}
+.ubi-modal__actions { display: flex; gap: 9px; margin-top: 14px; }
+.ubi-modal__btn {
+  flex: 1 1 auto;
+  height: 36px;
+  border-radius: 10px;
+  border: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 200ms ease, box-shadow 200ms ease, transform 200ms ease;
+}
+.ubi-modal__btn:active { transform: scale(0.96); }
+.ubi-modal__btn:disabled { opacity: 0.6; cursor: default; }
+.ubi-modal__btn--ghost {
+  color: var(--text-soft);
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.ubi-modal__btn--ghost:hover { background: rgba(255, 255, 255, 0.12); }
+.ubi-modal__btn--accent {
+  color: #0c1318;
+  background: linear-gradient(135deg, #f4661a, #c8500f);
+  box-shadow: 0 6px 16px rgba(244, 102, 26, 0.45);
+}
+.ubi-modal__btn--accent:hover { box-shadow: 0 8px 20px rgba(244, 102, 26, 0.6); }
+.ubi-modal__btn--save {
+  color: #0c1318;
+  background: linear-gradient(135deg, #a4d007, #6f9405);
+  box-shadow: 0 6px 16px rgba(164, 208, 7, 0.4);
+}
+.ubi-modal__btn--save:hover { box-shadow: 0 8px 20px rgba(164, 208, 7, 0.55); }

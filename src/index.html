@@ -29,6 +29,15 @@
         </div>
       </div>
 
+      <!-- platform tab bar -->
+      <div class="tabbar" id="tabbar">
+        <button class="tab tab--steam tab--active" data-platform="steam">Steam</button>
+        <button class="tab tab--ubisoft" data-platform="ubisoft">Ubisoft</button>
+      </div>
+
+      <!-- platform content — one pane visible at a time -->
+      <div class="platform-content">
+
       <!-- sliding screen stack -->
       <div class="screens" id="screens">
         <!-- ===================== MAIN ===================== -->
@@ -128,6 +137,56 @@
           </footer>
         </section>
       </div>
+
+      <!-- ===================== UBISOFT ===================== -->
+      <div class="ubisoft-pane" id="ubisoft-pane">
+        <section class="screen">
+          <header class="m-header">
+            <div class="logo logo--ubisoft" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none">
+                <circle cx="12" cy="12" r="9" stroke="#fff" stroke-width="1.6"/>
+                <path d="M12 3a9 9 0 0 0-8.3 5.5" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>
+                <path d="M12 12c2.4-3 6-3.6 8.7-2.2" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>
+                <circle cx="12" cy="12" r="2.1" fill="#fff"/>
+              </svg>
+            </div>
+            <div class="m-header__titles">
+              <div class="m-header__title">Ubisoft Accounts</div>
+              <div class="m-header__sub" id="ubi-account-count">0 accounts saved</div>
+            </div>
+          </header>
+
+          <!-- active account banner (rendered by JS) -->
+          <div class="banner" id="ubi-banner"></div>
+
+          <div class="eyebrow eyebrow--list">SWITCH TO</div>
+
+          <!-- scrollable account list (rendered by JS) -->
+          <div class="list" id="ubi-list"></div>
+
+          <footer class="m-footer">
+            <button class="add-btn" id="ubi-add-btn">+ Add Account</button>
+            <span class="version">v1.0.0</span>
+          </footer>
+        </section>
+
+        <!-- add-account modal overlay -->
+        <div class="ubi-modal" id="ubi-modal" aria-hidden="true">
+          <div class="ubi-modal__backdrop" id="ubi-modal-backdrop"></div>
+          <div class="ubi-modal__card" role="dialog" aria-modal="true" aria-labelledby="ubi-modal-title">
+            <div class="ubi-modal__title" id="ubi-modal-title">Add Ubisoft Account</div>
+            <div class="ubi-modal__body" id="ubi-modal-body">Log into the account you want to add in Ubisoft Connect, then come back here and click Save Account.</div>
+            <input class="ubi-modal__input" id="ubi-modal-name" type="text" placeholder="Account name (e.g. Main, Smurf)" maxlength="40" autocomplete="off" spellcheck="false" hidden />
+            <div class="ubi-modal__error" id="ubi-modal-error"></div>
+            <div class="ubi-modal__actions">
+              <button class="ubi-modal__btn ubi-modal__btn--ghost" id="ubi-modal-cancel">Cancel</button>
+              <button class="ubi-modal__btn ubi-modal__btn--accent" id="ubi-modal-primary">Open Ubisoft Connect</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      </div> <!-- /.platform-content -->
     </div>
   </body>
 </html>

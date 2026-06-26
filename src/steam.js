@@ -21,6 +21,11 @@ export async function addAccount() {
   return await invoke("add_account");
 }
 
+// `steamid` (lowercase) matches the Rust command's parameter name exactly.
+export async function forgetAccount(steamid) {
+  return await invoke("forget_account", { steamid });
+}
+
 export async function getSteamPath() {
   return await invoke("get_steam_path");
 }
