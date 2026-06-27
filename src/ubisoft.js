@@ -28,3 +28,7 @@ export async function getUbisoftPath() {
 export async function deleteUbisoftAccount(userId) {
   return await invoke("delete_ubisoft_account", { userId });
 }
+
+export async function fixUbisoftSession() {
+  return await invoke("fix_ubisoft_session");
+}

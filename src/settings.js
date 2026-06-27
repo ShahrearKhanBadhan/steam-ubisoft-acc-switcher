@@ -1,7 +1,7 @@
 // Settings screen logic — loads real settings, live accent theming, and the
 // real save flow. Talks to the backend through steam.js.
 
-import { getSettings, saveSettings, browseSteamPath } from "./steam.js";
+import { getSettings, saveSettings, browseSteamPath, browseUbisoftPath } from "./steam.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -52,15 +52,27 @@ export async function initSettings({ onClose }) {
     });
   });
 
-  // --- steam path (read-only field, browse is a no-op stub) ---
-  const pathText = document.querySelector(".path-field__text");
-  if (pathText && settings.steamPath) pathText.textContent = settings.steamPath;
+  // --- steam path ---
+  const steamPathText = $("steam-path-text");
+  if (steamPathText && settings.steamPath) steamPathText.textContent = settings.steamPath;
 
   $("browse-btn").addEventListener("click", async () => {
     const picked = await browseSteamPath();
     if (picked) {
       settings.steamPath = picked;
-      if (pathText) pathText.textContent = picked;
+      if (steamPathText) steamPathText.textContent = picked;
+    }
+  });
+
+  // --- ubisoft path ---
+  const ubiPathText = $("ubi-path-text");
+  if (ubiPathText && settings.ubisoftPath) ubiPathText.textContent = settings.ubisoftPath;
+
+  $("ubi-browse-btn").addEventListener("click", async () => {
+    const picked = await browseUbisoftPath();
+    if (picked) {
+      settings.ubisoftPath = picked;
+      if (ubiPathText) ubiPathText.textContent = picked;
     }
   });
 

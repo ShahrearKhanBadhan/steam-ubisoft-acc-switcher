@@ -91,7 +91,7 @@ fn live_dir() -> Result<PathBuf, String> {
 }
 
 /// Install directory from the registry, falling back to the default path.
-fn resolve_ubisoft_dir() -> String {
+pub fn resolve_ubisoft_dir() -> String {
     let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
     if let Ok(key) = hklm.open_subkey(UBISOFT_REG_KEY) {
         if let Ok(dir) = key.get_value::<String, _>("InstallDir") {
@@ -104,8 +104,19 @@ fn resolve_ubisoft_dir() -> String {
     DEFAULT_UBISOFT_DIR.to_string()
 }
 
+/// Returns the saved ubisoft path from settings if set, otherwise registry/default.
+fn effective_ubisoft_dir() -> String {
+    if let Ok(settings) = crate::steam::get_settings() {
+        let p = settings.ubisoft_path.trim().to_string();
+        if !p.is_empty() {
+            return p;
+        }
+    }
+    resolve_ubisoft_dir()
+}
+
 fn ubisoft_exe_path() -> Result<PathBuf, String> {
-    let dir = resolve_ubisoft_dir();
+    let dir = effective_ubisoft_dir();
     let exe = Path::new(&dir).join(UBISOFT_EXE);
     if exe.exists() {
         Ok(exe)
@@ -583,12 +594,37 @@ pub fn launch_ubisoft() -> Result<(), String> {
 
 #[tauri::command]
 pub fn get_ubisoft_path() -> Result<String, String> {
-    let dir = resolve_ubisoft_dir();
+    let dir = effective_ubisoft_dir();
     if Path::new(&dir).exists() {
         Ok(dir)
     } else {
         Err(format!("Ubisoft install path does not exist on disk: {dir}"))
     }
+}
+
+/// Patch the live CEF Preferences so session cookies survive the next startup.
+///
+/// When Windows shuts down, Ubisoft exits cleanly and CEF writes
+/// `exit_type = "Normal"` to its Preferences file. On next launch CEF sees
+/// "Normal" and clears all session cookies, sending the user to the login page.
+/// Calling this when the switcher app opens (and Ubisoft is not yet running)
+/// resets `exit_type` to "Crashed" so CEF treats the next launch as a session
+/// recovery and keeps the cookies intact.
+///
+/// Returns `true` if the patch was applied, `false` if Ubisoft is already
+/// running (in which case we leave the live session alone).
+#[tauri::command]
+pub fn fix_ubisoft_session() -> Result<bool, String> {
+    let mut system = System::new();
+    if ubisoft_running(&mut system) {
+        return Ok(false);
+    }
+    let live = match live_dir() {
+        Ok(d) => d,
+        Err(_) => return Ok(false), // Ubisoft not installed
+    };
+    patch_cef_exit_type(&live)?;
+    Ok(true)
 }
 
 /// Remove a saved account's snapshot. Any account can be removed, including the

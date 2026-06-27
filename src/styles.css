@@ -1,5 +1,5 @@
 /* ============================================================
-   Steam Acc Switcher — styles
+   Steam & Ubisoft Acc Switcher — styles
    Accent is themeable: everything is built on --accent-rgb so
    setting it on :root re-tints every glow / border / button live.
    ============================================================ */
@@ -585,6 +585,7 @@ body {
 }
 .about__title { font-size: 13px; font-weight: 700; color: var(--text); }
 .about__sub { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+.about__author { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 
 /* ---- save footer ---- */
 .s-footer {
@@ -673,6 +674,17 @@ body {
   transition: opacity 200ms var(--ease);
 }
 .app.show-ubisoft .ubisoft-pane { opacity: 1; pointer-events: auto; }
+
+/* Settings is global: when opened from the Ubisoft tab it must overlay the
+   Ubisoft pane instead of staying hidden behind it with the rest of .screens. */
+.app.show-ubisoft .screens.show-settings {
+  opacity: 1;
+  pointer-events: auto;
+  z-index: 5;
+}
+.app.show-ubisoft .screens.show-settings ~ .ubisoft-pane {
+  pointer-events: none;
+}
 
 .logo--ubisoft {
   background: linear-gradient(135deg, #f4661a, #7a2d05);

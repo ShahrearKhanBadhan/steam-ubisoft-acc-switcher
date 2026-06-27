@@ -10,6 +10,7 @@ import {
   switchUbisoftAccount,
   launchUbisoft,
   deleteUbisoftAccount,
+  fixUbisoftSession,
 } from "./ubisoft.js";
 
 // ---- timings (spec §6) ----
@@ -802,6 +803,9 @@ function ubiWire() {
 
 async function ubiBoot() {
   ubiBooted = true;
+  // Patch CEF exit_type to "Crashed" so session cookies survive PC restarts.
+  // Best-effort — silently ignored if Ubisoft is already running or not installed.
+  fixUbisoftSession().catch(() => {});
   try {
     ubiAccounts = await getUbisoftAccounts();
   } catch (e) {
@@ -840,6 +844,7 @@ async function boot() {
   }
 
   $("gear-btn").addEventListener("click", openSettings);
+  $("ubi-gear-btn").addEventListener("click", openSettings);
   $("add-btn").addEventListener("click", onAddAccountClick);
 
   initSettings({ onClose: closeSettings });

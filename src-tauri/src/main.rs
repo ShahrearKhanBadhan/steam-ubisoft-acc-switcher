@@ -6,6 +6,7 @@ mod ubisoft;
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             steam::get_accounts,
             steam::switch_account,
@@ -14,12 +15,14 @@ fn main() {
             steam::get_settings,
             steam::save_settings,
             steam::forget_account,
+            steam::browse_folder,
             ubisoft::get_ubisoft_accounts,
             ubisoft::save_ubisoft_account,
             ubisoft::switch_ubisoft_account,
             ubisoft::launch_ubisoft,
             ubisoft::get_ubisoft_path,
             ubisoft::delete_ubisoft_account,
+            ubisoft::fix_ubisoft_session,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

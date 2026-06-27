@@ -36,7 +36,7 @@ pub struct Account {
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", default)]
 pub struct Settings {
     pub close_steam: bool,
     pub launch_min: bool,
@@ -44,6 +44,7 @@ pub struct Settings {
     pub confirm: bool,
     pub steam_path: String,
     pub accent: String,
+    pub ubisoft_path: String,
 }
 
 impl Default for Settings {
@@ -55,6 +56,7 @@ impl Default for Settings {
             confirm: true,
             steam_path: resolve_steam_path(),
             accent: DEFAULT_ACCENT.to_string(),
+            ubisoft_path: crate::ubisoft::resolve_ubisoft_dir(),
         }
     }
 }
@@ -533,6 +535,25 @@ pub fn forget_account(steamid: String) -> Result<(), String> {
     Ok(())
 }
 
+// Async so Tauri runs it on a worker thread, not the main thread. The folder
+// picker dispatches to the main thread and blocks the caller until it closes;
+// calling `blocking_pick_folder` from the main thread would deadlock (and panic),
+// so this MUST stay async.
+#[tauri::command]
+pub async fn browse_folder(app: tauri::AppHandle, default_path: Option<String>) -> Option<String> {
+    use tauri_plugin_dialog::DialogExt;
+    let mut builder = app.dialog().file();
+    if let Some(ref p) = default_path {
+        if !p.trim().is_empty() {
+            builder = builder.set_directory(p);
+        }
+    }
+    builder
+        .blocking_pick_folder()
+        .and_then(|f| f.into_path().ok())
+        .map(|p| p.to_string_lossy().to_string())
+}
+
 #[tauri::command]
 pub fn get_steam_path() -> Result<String, String> {
     let path = resolve_steam_path();
@@ -566,4 +587,29 @@ pub fn save_settings(settings: Settings) -> Result<(), String> {
     apply_start_with_windows(settings.start_win)?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // An old settings.json written before `ubisoftPath` existed must still
+    // deserialize (missing field falls back to Default via #[serde(default)]),
+    // otherwise get_settings errors and the whole settings UI dies.
+    #[test]
+    fn deserializes_legacy_settings_without_ubisoft_path() {
+        let legacy = r##"{
+            "closeSteam": true,
+            "launchMin": false,
+            "startWin": false,
+            "confirm": true,
+            "steamPath": "c:/program files (x86)/steam",
+            "accent": "#66c0f4"
+        }"##;
+        let parsed: Settings = serde_json::from_str(legacy)
+            .expect("legacy settings.json should still parse");
+        assert_eq!(parsed.steam_path, "c:/program files (x86)/steam");
+        // missing field present as a non-empty default, not a parse failure
+        assert!(!parsed.ubisoft_path.is_empty());
+    }
 }

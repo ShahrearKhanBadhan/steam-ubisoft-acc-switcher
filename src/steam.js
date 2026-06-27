@@ -38,10 +38,12 @@ export async function saveSettings(settings) {
   return await invoke("save_settings", { settings });
 }
 
-// No native folder picker is wired up yet; settings.js imports this, so keep it
-// exported as a no-op until a real dialog flow is added.
 export async function browseSteamPath() {
-  return null;
+  return await invoke("browse_folder", { defaultPath: "C:\\Program Files (x86)\\Steam" });
+}
+
+export async function browseUbisoftPath() {
+  return await invoke("browse_folder", { defaultPath: "C:\\Program Files (x86)\\Ubisoft\\Ubisoft Game Launcher" });
 }
 
 // Default settings mirror the backend defaults, kept for any UI fallback.
@@ -51,6 +53,7 @@ const defaultSettings = {
   startWin: false,
   confirm: true,
   steamPath: "C:\\Program Files (x86)\\Steam",
+  ubisoftPath: "C:\\Program Files (x86)\\Ubisoft\\Ubisoft Game Launcher",
   accent: "#66c0f4",
 };
 
