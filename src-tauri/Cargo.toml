@@ -1,5 +1,5 @@
 [package]
-name = "steam-acc-switcher"
+name = "steam-ubi-acc-switcher"
 version = "0.1.0"
 description = "Steam account switcher for Windows"
 authors = ["you"]
