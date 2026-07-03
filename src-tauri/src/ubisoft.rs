@@ -309,6 +309,11 @@ fn copy_dir_all(src: &Path, dst: &Path) -> Result<(), String> {
 
 /// Copy the live session files into `dest`. Requires the user to be logged in
 /// (user.dat present) — otherwise the snapshot would capture nothing useful.
+///
+/// Copies are staged into a sibling `.staging` folder and only swapped into
+/// `dest` once everything copied: the CEF stores are multi-file (SQLite +
+/// journal, LevelDB MANIFEST/CURRENT/*.ldb) and a half-overwritten mix of two
+/// sessions reads as corruption, which lands the account on the login page.
 fn snapshot_session(dest: &Path) -> Result<(), String> {
     let live = live_dir()?;
     if !live.join(LOGIN_MARKER).exists() {
@@ -316,17 +321,56 @@ fn snapshot_session(dest: &Path) -> Result<(), String> {
             "Ubisoft Connect doesn't appear to be logged in. Please log in first.".to_string(),
         );
     }
+
+    let staging = dest.with_extension("staging");
+    let _ = std::fs::remove_dir_all(&staging);
+    std::fs::create_dir_all(&staging)
+        .map_err(|e| format!("Failed to create snapshot folder: {e}"))?;
+
+    let staged = (|| -> Result<(), String> {
+        for file in SESSION_FILES {
+            let src = live.join(file);
+            if src.exists() {
+                std::fs::copy(&src, staging.join(file))
+                    .map_err(|e| format!("Failed to copy {file}: {e}"))?;
+            }
+        }
+        for dir in CEF_SESSION_DIRS {
+            copy_dir_all(&live.join(dir), &staging.join(dir))?;
+        }
+        Ok(())
+    })();
+    if let Err(e) = staged {
+        let _ = std::fs::remove_dir_all(&staging);
+        return Err(e);
+    }
+
+    // Commit: replace each session file / CEF dir wholesale so the snapshot
+    // never mixes files from two different sessions.
     std::fs::create_dir_all(dest).map_err(|e| format!("Failed to create snapshot folder: {e}"))?;
     for file in SESSION_FILES {
-        let src = live.join(file);
-        if src.exists() {
-            std::fs::copy(&src, dest.join(file))
-                .map_err(|e| format!("Failed to copy {file}: {e}"))?;
+        let from = staging.join(file);
+        if from.exists() {
+            let to = dest.join(file);
+            let _ = std::fs::remove_file(&to);
+            std::fs::rename(&from, &to)
+                .map_err(|e| format!("Failed to store snapshot of {file}: {e}"))?;
         }
     }
     for dir in CEF_SESSION_DIRS {
-        copy_dir_all(&live.join(dir), &dest.join(dir))?;
+        let from = staging.join(dir);
+        if from.exists() {
+            let to = dest.join(dir);
+            let _ = std::fs::remove_dir_all(&to);
+            if let Some(parent) = to.parent() {
+                std::fs::create_dir_all(parent)
+                    .map_err(|e| format!("Failed to create snapshot folder: {e}"))?;
+            }
+            std::fs::rename(&from, &to)
+                .map_err(|e| format!("Failed to store snapshot of {dir}: {e}"))?;
+        }
     }
+    let _ = std::fs::remove_dir_all(&staging);
     Ok(())
 }
 
@@ -336,16 +380,28 @@ fn restore_session(src: &Path) -> Result<(), String> {
     let mut restored = 0;
     for file in RESTORE_FILES {
         let snap = src.join(file);
+        let live_file = live.join(file);
         if snap.exists() {
-            std::fs::copy(&snap, live.join(file))
+            std::fs::copy(&snap, &live_file)
                 .map_err(|e| format!("Failed to restore {file}: {e}"))?;
             restored += 1;
+        } else {
+            // Don't leave the previous account's copy behind — a user.dat from
+            // one account paired with another account's secure storage reads as
+            // a corrupt session and forces a fresh login.
+            let _ = std::fs::remove_file(&live_file);
         }
     }
     for dir in CEF_SESSION_DIRS {
         let snap_dir = src.join(dir);
         if snap_dir.exists() {
-            copy_dir_all(&snap_dir, &live.join(dir))?;
+            let live_target = live.join(dir);
+            // Clear the previous account's store first: Cookies/Local Storage
+            // are multi-file (SQLite + journal, LevelDB manifest set) and a mix
+            // of two sessions reads as corruption, so CEF discards the store
+            // and shows the login page.
+            let _ = std::fs::remove_dir_all(&live_target);
+            copy_dir_all(&snap_dir, &live_target)?;
             restored += 1;
         }
     }
@@ -549,7 +605,14 @@ pub fn switch_ubisoft_account(user_id: String) -> Result<(), String> {
         return Err("That account is no longer saved.".to_string());
     }
 
-    // Step 0 — re-snapshot the account we're leaving.
+    // Step 1 — close Ubisoft Connect (skips automatically if already closed).
+    // This must happen before re-snapshotting the leaving account: while the
+    // client runs, CEF holds and keeps rewriting the cookie/localStorage files,
+    // so a live copy is incomplete (locked files are skipped) and the token can
+    // rotate again right after the copy.
+    kill_ubisoft_and_wait()?;
+
+    // Step 2 — re-snapshot the account we're leaving.
     //
     // Ubisoft refreshes its session token while running and rewrites the live
     // user.dat / cookies; the old token in that account's saved snapshot is then
@@ -566,16 +629,13 @@ pub fn switch_ubisoft_account(user_id: String) -> Result<(), String> {
         }
     }
 
-    // Step 1 — close Ubisoft Connect (skips automatically if already closed).
-    kill_ubisoft_and_wait()?;
-
-    // Step 2 — restore the snapshot over the live session files.
+    // Step 3 — restore the snapshot over the live session files.
     restore_session(&dir)?;
 
-    // Step 3 — flip the active flag and bump lastUsed.
+    // Step 4 — flip the active flag and bump lastUsed.
     set_active(&user_id)?;
 
-    // Step 4 — relaunch.
+    // Step 5 — relaunch.
     let exe = ubisoft_exe_path()?;
     spawn_detached(&exe).map_err(|e| format!("Failed to launch Ubisoft Connect: {e}"))?;
 
